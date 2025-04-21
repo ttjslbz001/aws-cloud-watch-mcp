@@ -1,0 +1,141 @@
+# 产品原型
+
+## 1. 产品概述
+AWS CloudWatch 日志分析工具，用于分析 Lambda 函数与 API Gateway 集成的日志，帮助用户快速定位和解决问题。
+
+## 2. 核心功能
+
+### 2.1 日志采集功能
+1. API Gateway 集成信息获取
+   - 输入：API Gateway ID和路径
+   - 输出：关联的 Lambda 函数名
+   - 实现命令：
+     ```bash
+     aws apigateway get-integration --rest-api-id <api-id> --resource-id $(aws apigateway get-resources --rest-api-id <api-id> --query 'items[?path==`<path>`].id' --output text) --http-method <method> --query 'uri' --output text
+     ```
+
+2. Lambda 函数日志获取
+   - 请求日志采集
+     ```bash
+     aws logs filter-log-events --log-group-name "/aws/lambda/<function-name>" --filter-pattern "\"Starting event handling\"" --start-time <start-time> --end-time <end-time>
+     ```
+   - 响应日志采集
+     ```bash
+     aws logs filter-log-events --log-group-name "/aws/lambda/<function-name>" --filter-pattern "\"statusCode\" \"status\" \"message\"" --start-time <start-time> --end-time <end-time>
+     ```
+
+### 2.2 日志分析功能
+
+1. 错误分类
+   - 设备未启用错误
+   - 参数验证错误
+   - 其他系统错误
+
+2. 统计分析
+   - 请求成功率
+   - 错误类型分布
+   - 高频错误用户识别
+
+3. 性能分析
+   - 响应时间统计
+   - 超时请求分析
+   - 资源使用情况
+
+## 3. 用户界面
+
+### 3.1 查询界面
+1. 时间范围选择
+   - 快速选择（最近1小时、6小时、24小时、7天）
+   - 自定义时间范围
+
+2. 过滤条件
+   - API Gateway ID
+   - Lambda 函数名
+   - 错误类型
+   - 状态码
+   - 用户ID/邮箱
+
+### 3.2 分析结果展示
+
+1. 概览面板
+   - 总请求数
+   - 成功率
+   - 错误分布饼图
+   - 请求趋势图
+
+2. 详细日志列表
+   - 时间戳
+   - 请求ID
+   - 用户信息
+   - 请求参数
+   - 响应结果
+   - 错误信息
+
+3. 分析报告
+   - 错误类型统计
+   - 影响用户数量
+   - 建议改进措施
+
+## 4. 告警机制
+
+### 4.1 预设告警规则
+1. 错误率阈值告警
+   - 总体错误率超过阈值
+   - 特定错误类型频率过高
+
+2. 性能告警
+   - 响应时间超时
+   - 资源使用率过高
+
+### 4.2 自定义告警
+1. 告警条件配置
+   - 指标选择
+   - 阈值设置
+   - 时间窗口
+
+2. 通知方式
+   - 邮件
+   - SMS
+   - Slack
+   - 其他自定义webhook
+
+## 5. 改进建议
+
+### 5.1 开发建议
+1. 设备注册流程
+   - 实现设备状态检查API
+   - 添加设备注册确认机制
+   - 提供设备状态查询接口
+
+2. 参数验证
+   - 实现统一的参数验证中间件
+   - 提供参数验证SDK
+   - 完善错误提示信息
+
+### 5.2 运维建议
+1. 监控体系
+   - 设置多级告警阈值
+   - 建立错误追踪机制
+   - 实现自动化报告
+
+2. 文档规范
+   - API使用指南
+   - 错误码说明
+   - 最佳实践示例
+
+## 6. 后续优化方向
+
+1. 智能分析
+   - 引入机器学习模型识别异常模式
+   - 自动生成优化建议
+   - 预测潜在问题
+
+2. 可视化增强
+   - 交互式日志分析
+   - 自定义仪表板
+   - 多维度数据展示
+
+3. 集成增强
+   - 支持更多AWS服务
+   - 第三方监控工具集成
+   - CI/CD流程集成 

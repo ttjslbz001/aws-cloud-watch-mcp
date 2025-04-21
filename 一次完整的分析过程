@@ -1,0 +1,85 @@
+# 一次完整的分析过程
+
+## 1. 获取Lambda函数名
+首先通过API Gateway获取Lambda函数名：
+```bash
+aws apigateway get-integration --rest-api-id v15timd4qh --resource-id $(aws apigateway get-resources --rest-api-id v15timd4qh --query 'items[?path==`/v1/push-notification`].id' --output text) --http-method POST --query 'uri' --output text | sed -n 's/.*function:\([^\/]*\).*/\1/p'
+```
+输出结果：
+```
+service-notification-pushNotificationHandlerD04422-CtvQYfIoHueP
+```
+
+## 2. 查询请求日志
+使用以下命令查询过去24小时内的请求日志：
+```bash
+aws logs filter-log-events --log-group-name "/aws/lambda/service-notification-pushNotificationHandlerD04422-CtvQYfIoHueP" --filter-pattern "\"Starting event handling\"" --start-time $(date -v-24H +%s)000 --end-time $(date +%s)000 | jq -r '.events[] | select(.message | fromjson | .label != null) | .message | fromjson | .label'
+```
+
+## 3. 查询响应日志
+使用以下命令查询过去24小时内的响应日志：
+```bash
+aws logs filter-log-events --log-group-name "/aws/lambda/service-notification-pushNotificationHandlerD04422-CtvQYfIoHueP" --filter-pattern "\"statusCode\" \"status\" \"message\"" --start-time $(date -v-24H +%s)000 --end-time $(date +%s)000 | jq -r '.events[].message'
+```
+
+## 4. 日志分析结果
+
+### 4.1 错误类型统计
+
+1. 设备未启用错误（最常见）：
+```json
+{
+  "status": "error",
+  "message": "Not found any enabled device to send notification for user [xxx@xxx.com]",
+  "error_code": "invalid_request",
+  "statusCode": 400
+}
+```
+
+2. 必填字段缺失错误：
+```
+- recipients[0] is a required field
+- notification.message.title is a required field
+- notification.message.body is a required field
+- notification.template.parameters[0].key is a required field
+```
+
+3. 成功的请求特征：
+```json
+{
+  "status": "success",
+  "message": "The request was processed successfully",
+  "statusCode": 200
+}
+```
+
+### 4.2 统计数据
+
+1. 总请求数：约50个请求
+2. 成功请求：约8个（16%）
+3. 失败请求：约42个（84%）
+4. 主要失败原因：
+   - 设备未启用：约35个（83%的失败案例）
+   - 参数验证失败：约7个（17%的失败案例）
+
+### 4.3 建议改进措施
+
+1. 设备注册流程优化：
+   - 在用户注册时确保设备正确注册和启用
+   - 添加设备状态检查机制
+   - 提供清晰的设备注册指导
+
+2. 参数验证增强：
+   - 在发送请求前进行客户端参数验证
+   - 提供更详细的错误信息
+   - 实现请求参数的自动补全或默认值
+
+3. 监控告警：
+   - 设置错误率监控阈值
+   - 对高频失败用户进行分析
+   - 建立错误模式识别机制
+
+4. 文档完善：
+   - 更新API文档，明确说明必填字段
+   - 提供常见错误的处理指南
+   - 添加示例代码和最佳实践 
